@@ -44,5 +44,11 @@ Responde SOLO con JSON válido, sin texto extra, con esta estructura exacta:
     )
 
     raw = response.choices[0].message.content
+    raw = raw.strip()
+    if "```" in raw:
+        raw = raw.split("```")[1]
+        if raw.startswith("json"):
+            raw = raw[4:]
+    
     data = json.loads(raw)
     return data
