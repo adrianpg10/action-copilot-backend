@@ -1,8 +1,9 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
-from groq import Groq
+from google import genai
 import json
+import os
 
 app = FastAPI()
 
@@ -13,8 +14,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-import os 
-client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
 
 class AnalyzeRequest(BaseModel):
     text: str
@@ -22,33 +22,28 @@ class AnalyzeRequest(BaseModel):
 
 @app.post("/analyze")
 def analyze(req: AnalyzeRequest):
-    response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
-        messages=[
-            {
-                "role": "system",
-                "content": """Eres un asistente que analiza páginas web y devuelve acciones concretas.
-Responde SOLO con JSON válido, sin texto extra, con esta estructura exacta:
-{
+    prompt = f"""Eres un asistente que analiza páginas web y devuelve acciones concretas.
+Responde SOLO con JSON válido, sin texto extra, sin markdown, sin backticks, con esta estructura exacta:
+{{
   "summary": "resumen en 1 frase",
   "actions": ["acción 1", "acción 2", "acción 3"],
   "next_step": "la acción más importante a hacer ahora"
-}"""
-            },
-            {
-                "role": "user",
-                "content": f"Analiza este contenido de una web:\n\n{req.text[:3000]}"
-            }
-        ],
-        temperature=0.3
+}}
+
+Analiza este contenido de una web:
+
+{req.text[:3000]}"""
+
+    response = client.models.generate_content(
+        model="gemini-2.0-flash",
+        contents=prompt
     )
 
-    raw = response.choices[0].message.content
-    raw = raw.strip()
+    raw = response.text.strip()
     if "```" in raw:
         raw = raw.split("```")[1]
         if raw.startswith("json"):
             raw = raw[4:]
-    
+
     data = json.loads(raw)
     return data
