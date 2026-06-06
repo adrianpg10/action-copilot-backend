@@ -3,8 +3,6 @@ from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from groq import Groq
 import json
-from dotenv import load_dotenv
-load_dotenv()
 
 app = FastAPI()
 
